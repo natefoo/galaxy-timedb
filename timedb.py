@@ -159,12 +159,12 @@ class Tool:
         return f"{self.base_id}/{self.version}"
 
     def update_stats(self, summary):
-        self.min_runtime = int(summary.min)
-        self.median_runtime = int(summary.median)
-        self.mean_runtime = int(summary.mean)
-        self.pct95_runtime = int(summary.perc_95)
-        self.pct99_runtime = int(summary.perc_99)
-        self.max_runtime = int(summary.max)
+        self.min_runtime = int(summary.min or -1)
+        self.median_runtime = int(summary.median or -1)
+        self.mean_runtime = int(summary.mean or -1)
+        self.pct95_runtime = int(summary.perc_95 or -1)
+        self.pct99_runtime = int(summary.perc_99 or -1)
+        self.max_runtime = int(summary.max or -1)
 
     def upsert_values(self):
         return {
@@ -263,11 +263,15 @@ class App:
         con.commit()
 
     def upsert_tool(self, tool, upsert_sql):
+        print(f"processing {tool.key=}")
         count = self.run_count(tool)
-        tool.run_count = count
-        summary = self.summary_stats(tool)
-        tool.update_stats(summary)
-        print(tool)
+        if tool.run_count != count:
+            # don't bother collecting stats if the run count has not changed, just touch the update time
+            tool.run_count = count
+            summary = self.summary_stats(tool)
+            print(f"{tool.key=}: {summary=}")
+            tool.update_stats(summary)
+            print(tool)
         self.commit_tool(tool, upsert_sql)
 
     def handle_tool_changes(self):
